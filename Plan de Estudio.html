@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Malla Interactiva - Lic. en Turismo</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+    }
+    #progreso {
+      text-align: center;
+      margin: 1rem 0 2rem;
+      font-weight: bold;
+    }
+    .anio {
+      margin-bottom: 2rem;
+    }
+    .materia {
+      display: inline-block;
+      margin: 5px;
+      padding: 10px 15px;
+      border-radius: 8px;
+      color: white;
+      background: #3d348b;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .materia.anio2 { background: #7678ed; }
+    .materia.anio3 { background: #f7b801; color: black; }
+    .materia.anio4 { background: #f18701; }
+
+    .materia.aprobada {
+      background: #c2f0c2 !important;
+      text-decoration: line-through;
+      color: #555 !important;
+    }
+    .materia.bloqueada {
+      background: #eee !important;
+      color: #aaa !important;
+      cursor: not-allowed;
+    }
+    .materia:hover::after {
+      content: attr(data-info);
+      display: block;
+      position: absolute;
+      background: #fff;
+      color: #000;
+      border: 1px solid #ccc;
+      padding: 5px;
+      font-size: 0.8em;
+      max-width: 200px;
+      z-index: 10;
+    }
+    #acciones {
+      text-align: center;
+      margin-top: 2rem;
+    }
+    button {
+      margin: 0 10px;
+      padding: 8px 15px;
+      border-radius: 5px;
+      border: none;
+      background: #f35b04;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #d44a00;
+    }
+  </style>
+</head>
+<body>
+  <h1>Malla Interactiva - Lic. en Turismo (UNLaR)</h1>
+  <div id="progreso"></div>
+  <div id="malla"></div>
+  <div id="acciones">
+    <button onclick="guardarProgreso()">💾 Guardar</button>
+    <button onclick="cargarProgreso()">📂 Cargar</button>
+    <button onclick="descargarProgreso()">⬇️ Exportar</button>
+    <input type="file" id="importarArchivo" accept=".json" style="display:none" onchange="importarProgreso(event)">
+    <button onclick="document.getElementById('importarArchivo').click()">⬆️ Importar</button>
+  </div>
+
+  <script>
+    const materias = {
+      "SLT85": { nombre: "Derecho aplicado al turismo", anio: 1, correlativas: [] },
+      "SLT84": { nombre: "Inglés I", anio: 1, correlativas: [] },
+      "SLT87": { nombre: "Principios de administración", anio: 1, correlativas: [] },
+      "SLT86": { nombre: "Procesos históricos mundiales", anio: 1, correlativas: [] },
+      "SLT81": { nombre: "Espacios geográficos de Arg. y América", anio: 1, correlativas: [] },
+      "SLT82": { nombre: "Expresión oral y escrita", anio: 1, correlativas: [] },
+      "SLT83": { nombre: "Fund. económicos aplic. al turismo", anio: 1, correlativas: [] },
+      "SLT80": { nombre: "Teoría y técnica del turismo", anio: 1, correlativas: [] },
+      "SLT92": { nombre: "Legislación turística", anio: 2, correlativas: ["SLT85"] },
+      "SLT94": { nombre: "Métodos y técnicas de investigación", anio: 2, correlativas: ["SLT82"] },
+      "SLT93": { nombre: "Servicio de transporte", anio: 2, correlativas: ["SLT80"] },
+      "SLT95": { nombre: "Sociología turística", anio: 2, correlativas: ["SLT80"] },
+      "SLT97": { nombre: "Fund. contabilidad aplicada al turismo", anio: 2, correlativas: [] },
+      "SLT98": { nombre: "Introducción a la comercialización", anio: 2, correlativas: [] },
+      "SLT99": { nombre: "Psicología social y dinámica grupal", anio: 2, correlativas: [] },
+      "SLT96": { nombre: "TICs aplicadas al turismo", anio: 2, correlativas: [] },
+      "SLT88": { nombre: "Esp. geográficos de Europa, Asia, África...", anio: 2, correlativas: ["SLT81"] },
+      "SLT89": { nombre: "Gestión alojamiento y gastronómico", anio: 2, correlativas: ["SLT87"] },
+      "SLT90": { nombre: "Inglés II", anio: 2, correlativas: ["SLT84"] },
+      "SLT91": { nombre: "Práctica pre profesional I", anio: 2, correlativas: ["SLT80"] },
+      "LT106": { nombre: "Gestión de estadística en turismo", anio: 3, correlativas: [] },
+      "LT104": { nombre: "Inglés III", anio: 3, correlativas: ["SLT90"] },
+      "LT105": { nombre: "Políticas turísticas y adm. pública", anio: 3, correlativas: ["SLT92"] },
+      "LT107": { nombre: "Proc. históricos arg. y riojanos", anio: 3, correlativas: ["SLT86"] },
+      "LT110": { nombre: "Antropología cultural", anio: 3, correlativas: [] },
+      "LT109": { nombre: "Recursos humanos", anio: 3, correlativas: [] },
+      "LT108": { nombre: "Sistemas de calidad", anio: 3, correlativas: [] },
+      "LT102": { nombre: "Investigación de mercados turísticos", anio: 3, correlativas: [] },
+      "LT101": { nombre: "Gestión de agencias de viajes", anio: 3, correlativas: [] },
+      "LT100": { nombre: "Planeamiento y desarrollo turístico", anio: 3, correlativas: [] },
+      "LT103": { nombre: "Práctica pre profesional II", anio: 3, correlativas: ["SLT91"] },
+      "LT116": { nombre: "Investigación aplicada al turismo", anio: 4, correlativas: ["LT102"] },
+      "LT117": { nombre: "Ética y deontología profesional", anio: 4, correlativas: [] },
+      "LT118": { nombre: "Seminario de trabajo final", anio: 4, correlativas: ["LT116"] },
+      "LT112": { nombre: "Formulación y evaluación de proyectos", anio: 4, correlativas: [] },
+      "LT114": { nombre: "Inglés IV", anio: 4, correlativas: ["LT104"] },
+      "LT111": { nombre: "Org. y adm. de empresas turísticas", anio: 4, correlativas: ["LT105"] },
+      "LT113": { nombre: "Marketing para empresas y destinos", anio: 4, correlativas: [] },
+      "LT115": { nombre: "Práctica pre profesional III", anio: 4, correlativas: ["LT103"] }
+    };
+
+    let estadoMaterias = JSON.parse(localStorage.getItem("estadoMaterias")) || {};
+    const malla = document.getElementById("malla");
+    const progreso = document.getElementById("progreso");
+
+    for (let anio = 1; anio <= 4; anio++) {
+      const div = document.createElement("div");
+      div.className = "anio";
+      div.innerHTML = `<h2>Año ${anio}</h2>`;
+      Object.entries(materias).forEach(([codigo, mat]) => {
+        if (mat.anio === anio) {
+          const btn = document.createElement("div");
+          btn.className = `materia anio${anio}`;
+          btn.textContent = mat.nombre;
+          btn.dataset.codigo = codigo;
+          btn.setAttribute("data-info", `Código: ${codigo}\nAño: ${mat.anio}\nCorrelativas: ${mat.correlativas.join(", ") || "Ninguna"}`);
+          btn.addEventListener("click", () => toggleAprobacion(codigo));
+          div.appendChild(btn);
+        }
+      });
+      malla.appendChild(div);
+    }
+
+    function toggleAprobacion(codigo) {
+      estadoMaterias[codigo] = !estadoMaterias[codigo];
+      guardarEnLocalStorage();
+      renderMalla();
+    }
+
+    function renderMalla() {
+      const total = Object.keys(materias).length;
+      const aprobadas = Object.values(estadoMaterias).filter(Boolean).length;
+      progreso.textContent = `✅ ${aprobadas} de ${total} materias aprobadas (${Math.round((aprobadas / total) * 100)}%)`;
+      document.querySelectorAll(".materia").forEach(el => {
+        const cod = el.dataset.codigo;
+        el.classList.remove("aprobada", "bloqueada");
+        if (estadoMaterias[cod]) {
+          el.classList.add("aprobada");
+        } else {
+          const correlativas = materias[cod].correlativas;
+          const bloqueada = correlativas.some(c => !estadoMaterias[c]);
+          if (bloqueada) {
+            el.classList.add("bloqueada");
+          }
+        }
+      });
+    }
+
+    function guardarEnLocalStorage() {
+      localStorage.setItem("estadoMaterias", JSON.stringify(estadoMaterias));
+    }
+
+    function guardarProgreso() {
+      guardarEnLocalStorage();
+      alert("¡Progreso guardado!");
+    }
+
+    function cargarProgreso() {
+      estadoMaterias = JSON.parse(localStorage.getItem("estadoMaterias")) || {};
+      renderMalla();
+    }
+
+    function descargarProgreso() {
+      const blob = new Blob([JSON.stringify(estadoMaterias)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "progreso_turismo.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importarProgreso(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        estadoMaterias = JSON.parse(e.target.result);
+        guardarEnLocalStorage();
+        renderMalla();
+      };
+      reader.readAsText(file);
+    }
+
+    renderMalla();
+  </script>
+</body>
+</html>
